@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.10.xsd">
+
+    <!-- 初始数据库结构变更 -->
+    <changeSet id="1.0" author="developer">
+        <!-- 使用现有的User.sql文件创建users表 -->
+        <sqlFile path="sql/Users.sql" splitStatements="true" stripComments="true"/>
+    </changeSet>
+    
+</databaseChangeLog>

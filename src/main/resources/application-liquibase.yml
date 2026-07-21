@@ -1,0 +1,7 @@
+# Liquibase配置
+spring:
+  liquibase:
+    enabled: true
+    change-log: db/changelog/db.changelog-master.xml
+    default-schema: public
+    contexts: development
