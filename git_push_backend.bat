@@ -21,7 +21,7 @@ if not exist "!BACKEND_DIR!\" (
     exit /b 1
 )
 
-:: 1.5 检查GitHub连通性（新增）
+:: 1.5 检查GitHub连通性
 echo [检测] 正在检查与GitHub的连接...
 ping github.com -n 1 >nul
 if errorlevel 1 (
@@ -31,11 +31,7 @@ if errorlevel 1 (
 )
 echo 网络连接正常。
 
-:: 2. 收集提交信息
-call :input_msg
-if errorlevel 1 goto end_error
-
-:: 3. 处理后端
+:: 2. 处理后端（内部会检查是否有更改，有则询问提交信息）
 call :process_dir "!BACKEND_DIR!" "后端"
 if errorlevel 1 goto end_error
 
@@ -101,14 +97,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: 提交（允许空提交）
+:: 检查是否有更改（忽略空行）
 git status --porcelain | findstr . >nul
 if errorlevel 1 (
-    echo 工作区无更改，将创建空提交...
-    git commit --allow-empty -m "!COMMIT_MSG!"
-) else (
-    git commit -m "!COMMIT_MSG!"
+    echo !NAME! 无更改，跳过提交和推送。
+    exit /b 0
 )
+
+:: 有更改：询问提交信息
+call :input_msg
+if errorlevel 1 exit /b 1
+
+:: 提交
+git commit -m "!COMMIT_MSG!"
 if errorlevel 1 (
     echo git commit 失败！
     exit /b 1
@@ -136,13 +137,12 @@ type "%LOG_FILE%" | findstr /i "remote: Repository not found" >nul && set "FATAL
 type "%LOG_FILE%" | findstr /i "Permission denied" >nul && set "FATAL=1"
 type "%LOG_FILE%" | findstr /i "Authentication failed" >nul && set "FATAL=1"
 
-:: 临时网络错误关键词（若出现则不视为致命）
+:: 临时网络错误关键词
 type "%LOG_FILE%" | findstr /i "Recv failure" >nul && set "TEMP_NET=1"
 type "%LOG_FILE%" | findstr /i "Connection reset" >nul && set "TEMP_NET=1"
 type "%LOG_FILE%" | findstr /i "Connection timed out" >nul && set "TEMP_NET=1"
 type "%LOG_FILE%" | findstr /i "Could not resolve host" >nul && set "TEMP_NET=1"
 
-:: 若存在网络临时错误，则忽略致命标记，进入重试
 if "!TEMP_NET!"=="1" set "FATAL=0"
 
 if "!FATAL!"=="1" (
@@ -157,7 +157,7 @@ if "!FATAL!"=="1" (
     exit /b 1
 )
 
-:: 临时性错误：显示错误并启动重试
+:: 临时性错误：启动重试
 echo 推送失败，可能是网络波动。按任意键取消，或等待自动重试...
 type "%LOG_FILE%" | findstr /i "error fatal" >nul
 set /a count=0
