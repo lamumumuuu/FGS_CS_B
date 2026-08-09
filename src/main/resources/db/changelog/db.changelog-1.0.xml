@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    db.changelog-1.0.xml
+    Liquibase 数据库变更日志 - 版本 1.0
+    用于定义数据库初始结构的变更，通过引用外部 SQL 文件创建 users 表。
+    注意：当前 application.yml 中 liquibase.enabled = false，此文件默认不会被自动执行。
+-->
 <databaseChangeLog
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -7,7 +13,7 @@
 
     <!-- 初始数据库结构变更 -->
     <changeSet id="1.0" author="developer">
-        <!-- 使用现有的User.sql文件创建users表 -->
+        <!-- 引用外部 SQL 文件创建 users 表 -->
         <sqlFile path="sql/Users.sql" splitStatements="true" stripComments="true"/>
     </changeSet>
     

@@ -1,17 +1,20 @@
+# application-redis.yml
+# Redis 连接与连接池配置，被 application.yml 通过 spring.profiles.include: redis 引入。
+
 # Redis配置
 spring:
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: 
-      database: 0
-      timeout: 2000ms  # 连接超时时间
-      connect-timeout: 2000ms  # 连接建立超时时间
-      lettuce:
+      host: localhost                         # Redis 服务器地址
+      port: 6379                              # Redis 端口
+      password:                               # 密码（当前为空，本地开发未设密码）
+      database: 0                             # 使用的数据库索引（0~15）
+      timeout: 2000ms                         # 命令执行超时时间
+      connect-timeout: 2000ms                 # 连接建立超时时间
+      lettuce:                                # Lettuce 客户端连接池配置
         pool:
-          max-active: 8  # 最大连接数
-          max-idle: 8    # 最大空闲连接数
-          min-idle: 0    # 最小空闲连接数
-          max-wait: -1ms # 连接池最大阻塞等待时间，-1表示无限制
-        shutdown-timeout: 100ms # 关闭超时时间
+          max-active: 8                       # 最大活跃连接数
+          max-idle: 8                         # 最大空闲连接数
+          min-idle: 0                         # 最小空闲连接数
+          max-wait: -1ms                      # 获取连接最大等待时间（-1 无限制）
+        shutdown-timeout: 100ms               # 优雅关闭时等待任务完成的最长时间

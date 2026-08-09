@@ -1,3 +1,12 @@
+// src/main/java/com/example/computerassociation/util/JwtUtil.java
+
+/**
+ * JWT 工具类
+ * 
+ * 负责生成、解析、验证 JWT Token。
+ * 密钥和过期时间从 application.yml 中注入，Token 采用 HMAC-SHA 算法签名。
+ */
+
 package com.example.computerassociation.util;
 
 import io.jsonwebtoken.Claims;
@@ -20,33 +29,37 @@ import java.util.Map;
 public class JwtUtil {
 
     @Value("${jwt.secret}")
-    private String secret;
+    private String secret;                          /// JWT 签名密钥，从配置文件注入
 
     @Value("${jwt.expiration:86400}")
-    private Long expiration;
+    private Long expiration;                        /// Token 有效期（秒），默认 86400（24h）
 
+    /** 根据密钥获取签名 Key 对象 */
     private Key getSigningKey() {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    /** 生成 JWT Token */
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("username", username);
         claims.put("created", new Date());
 
         return Jwts.builder()
-                .setClaims(claims)
-                .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000))
-                .signWith(getSigningKey())
+                .setClaims(claims)                                             // 设置载荷
+                .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000))  // 过期时间
+                .signWith(getSigningKey())                                     // 签名
                 .compact();
     }
 
+    /** 从 Token 中提取用户名 */
     public String getUsernameFromToken(String token) {
         Claims claims = getClaimsFromToken(token);
         return claims != null ? claims.get("username", String.class) : null;
     }
 
+    /** 解析 Token，返回 Claims */
     private Claims getClaimsFromToken(String token) {
         try {
             return Jwts.parserBuilder()
@@ -63,6 +76,7 @@ public class JwtUtil {
         }
     }
 
+    /** 详细验证 Token（区分过期与其他无效原因） */
     public JwtValidationResult validateTokenWithResult(String token, String username) {
         try {
             String tokenUsername = getUsernameFromToken(token);
@@ -81,16 +95,19 @@ public class JwtUtil {
         }
     }
 
+    /** 简单验证 Token（返回布尔值） */
     public Boolean validateToken(String token, String username) {
         JwtValidationResult result = validateTokenWithResult(token, username);
         return result.isValid();
     }
 
+    /** 判断 Token 是否过期 */
     private Boolean isTokenExpired(String token) {
         Date expirationDate = getExpirationDateFromToken(token);
         return expirationDate != null && expirationDate.before(new Date());
     }
 
+    /** 获取 Token 的过期时间 */
     public Date getExpirationDateFromToken(String token) {
         try {
             Claims claims = Jwts.parserBuilder()
@@ -104,10 +121,13 @@ public class JwtUtil {
         }
     }
 
+    /* ------------------------------------------------------------------ */
+    /*  内部类：JWT 验证结果                                              */
+    /* ------------------------------------------------------------------ */
     public static class JwtValidationResult {
-        private final boolean valid;
-        private final boolean expired;
-        private final String message;
+        private final boolean valid;           /// 是否有效
+        private final boolean expired;         /// 是否过期
+        private final String message;          /// 附加消息
 
         private JwtValidationResult(boolean valid, boolean expired, String message) {
             this.valid = valid;

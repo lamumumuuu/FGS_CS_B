@@ -1,7 +1,11 @@
-# Liquibase配置
+# application-liquibase.yml
+# Liquibase 数据库版本管理配置。
+# 注意：此文件默认不被加载（application.yml 中 liquibase.enabled = false）。
+# 需要显式激活 liquibase profile 或手动启用后，该配置才会生效。
+
 spring:
   liquibase:
-    enabled: true
-    change-log: db/changelog/db.changelog-master.xml
-    default-schema: public
-    contexts: development
+    enabled: true                            # 启用 Liquibase（覆盖主配置中的 false）
+    change-log: db/changelog/db.changelog-master.xml  # changelog 主文件路径
+    default-schema: public                   # 默认 schema
+    contexts: development                    # 上下文标记，用于区分开发/测试/生产环境

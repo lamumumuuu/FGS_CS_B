@@ -1,54 +1,46 @@
+# application.yml
+# Spring Boot 核心配置文件，整合数据源、MyBatis-Plus、JWT、CORS、监控与日志等模块。
+# 所有敏感值通过 ${环境变量} 形式从 .env 文件注入，配置中提供了合理的默认值。
+
 spring:
   profiles:
-    include: liquibase,redis
+    include: redis                         # 引入 application-redis.yml 配置
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD}               # 密码无默认值，必须通过环境变量提供
     driver-class-name: org.postgresql.Driver
   sql:
     init:
-      mode: never
-  mail:
-    host: ${MAIL_HOST:smtp.163.com}
-    port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    from: ${MAIL_FROM:${MAIL_USERNAME}}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          ssl:
-            enable: true
-          starttls:
-            enable: false
+      mode: never                          # 禁用 SQL 脚本初始化，完全由 Liquibase（或手动）管理表结构
+  liquibase:
+    enabled: false                         # 关闭 Liquibase，启动时不执行数据库迁移
 
 mybatis-plus:
-  mapper-locations: classpath*:mapper/**/*.xml
-  type-aliases-package: com.example.computerassociation.entity
+  mapper-locations: classpath*:mapper/**/*.xml   # Mapper XML 文件路径
+  type-aliases-package: com.example.computerassociation.entity  # 实体类别名包
   configuration:
-    map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    map-underscore-to-camel-case: true     # 自动下划线转驼峰（如 user_name -> userName）
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl  # 使用 Slf4j 输出 SQL 日志
 
 jwt:
-  secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION:86400}
+  secret: ${JWT_SECRET}                    # JWT 签名密钥，必须配置
+  expiration: ${JWT_EXPIRATION:86400}      # Token 有效期，默认 86400 秒（24 小时）
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
   allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
   allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type,X-Requested-With}
-  max-age: ${CORS_MAX_AGE:3600}
+  max-age: ${CORS_MAX_AGE:3600}            # 预检请求缓存时间，默认 3600 秒
 
 management:
-  health:
-    mail:
-      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health                    # 仅暴露 /actuator/health 健康检查端点
 
 logging:
   level:
-    com.example.computerassociation: DEBUG
-    org.springframework.mail: DEBUG
+    com.example.computerassociation: DEBUG # 项目包 DEBUG 级别，方便开发调试
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,3 +1,10 @@
+// src/main/java/com/example/computerassociation/entity/User.java
+
+/**
+ * 用户实体类
+ * 映射数据库表 users
+ */
+
 package com.example.computerassociation.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -7,24 +14,26 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 用户实体类
- * 使用Lombok注解减少样板代码
- * 使用MyBatis-Plus注解映射数据库表
- */
 @Data
-@TableName("users") // 映射到数据库中的users表
+@TableName("users")
 public class User {
-    @TableId(type = IdType.AUTO) // 主键自增
-    private Long id;
 
-    private String username;      // 用户名
-    private String email;         // 邮箱
-    private String password;      // 加密后的密码
-    private String avatar;        // 头像URL
-    private Integer role;         // 角色：0-普通用户，1-干事,2-管理员
-    private Integer status;       // 用户状态：0-禁用，1-启用
-    private LocalDateTime createTime;  // 创建时间
-    private LocalDateTime updateTime;  // 更新时间
-    private LocalDateTime lastLoginTime; // 最后登录时间
+    @TableId(type = IdType.AUTO)
+    private Long id;                    /// 主键 ID
+
+    private String username;            /// 用户名，唯一
+
+    private String password;            /// 加密后的密码
+
+    private String avatar;              /// 头像路径
+
+    private Integer role;               /// 角色编号（旧字段，现通过 user_roles 表管理）
+
+    private Integer status;             /// 状态（1 正常 / 0 禁用）
+
+    private LocalDateTime createTime;   /// 创建时间
+
+    private LocalDateTime updateTime;   /// 更新时间
+
+    private LocalDateTime lastLoginTime; /// 最后登录时间
 }

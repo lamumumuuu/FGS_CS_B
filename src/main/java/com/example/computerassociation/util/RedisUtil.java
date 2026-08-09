@@ -1,3 +1,12 @@
+// src/main/java/com/example/computerassociation/util/RedisUtil.java
+
+/**
+ * Redis 工具类
+ * 
+ * 对 RedisTemplate 进行二次封装，提供常用的缓存读写方法。
+ * 同时包含登录失败锁定功能：连续失败 5 次锁定 15 分钟。
+ */
+
 package com.example.computerassociation.util;
 
 import lombok.extern.slf4j.Slf4j;
@@ -15,13 +24,16 @@ public class RedisUtil {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final String LOGIN_FAIL_PREFIX = "login_fail:";
-    private static final int MAX_LOGIN_ATTEMPTS = 5;
-    private static final long LOGIN_LOCK_DURATION = 15;
+    // 登录失败计数器相关常量
+    private static final String LOGIN_FAIL_PREFIX = "login_fail:";    /// Redis Key 前缀
+    private static final int MAX_LOGIN_ATTEMPTS = 5;                 /// 最大尝试次数
+    private static final long LOGIN_LOCK_DURATION = 15;              /// 锁定时长（分钟）
 
-    private static final String CODE_SEND_PREFIX = "code_send:";
-    private static final long CODE_SEND_INTERVAL = 60;
+    /* ------------------------------------------------------------------ */
+    /*  基础操作                                                         */
+    /* ------------------------------------------------------------------ */
 
+    /** 设置过期时间（秒） */
     public boolean expire(String key, long time) {
         try {
             if (time > 0) {
@@ -34,10 +46,12 @@ public class RedisUtil {
         }
     }
 
+    /** 获取剩余过期时间（秒） */
     public long getExpire(String key) {
         return redisTemplate.getExpire(key, TimeUnit.SECONDS);
     }
 
+    /** 判断 key 是否存在 */
     public boolean hasKey(String key) {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(key));
@@ -47,6 +61,7 @@ public class RedisUtil {
         }
     }
 
+    /** 删除一个或多个 key */
     @SuppressWarnings("unchecked")
     public void del(String... key) {
         if (key != null && key.length > 0) {
@@ -58,15 +73,18 @@ public class RedisUtil {
         }
     }
 
+    /** 获取缓存（返回 Object） */
     public Object get(String key) {
         return key == null ? null : redisTemplate.opsForValue().get(key);
     }
 
+    /** 获取缓存并转为字符串 */
     public String getString(String key) {
         Object value = get(key);
         return value != null ? value.toString() : null;
     }
 
+    /** 写入缓存（不设过期） */
     public boolean set(String key, Object value) {
         try {
             redisTemplate.opsForValue().set(key, value);
@@ -77,6 +95,7 @@ public class RedisUtil {
         }
     }
 
+    /** 写入缓存（设过期时间，秒） */
     public boolean set(String key, Object value, long time) {
         try {
             if (time > 0) {
@@ -91,6 +110,7 @@ public class RedisUtil {
         }
     }
 
+    /** 写入缓存（设过期时间，自定义时间单位） */
     public boolean set(String key, Object value, long time, TimeUnit timeUnit) {
         try {
             if (time > 0) {
@@ -105,6 +125,11 @@ public class RedisUtil {
         }
     }
 
+    /* ------------------------------------------------------------------ */
+    /*  计数器操作                                                        */
+    /* ------------------------------------------------------------------ */
+
+    /** 自增 1 */
     public long increment(String key) {
         try {
             Long result = redisTemplate.opsForValue().increment(key);
@@ -115,6 +140,7 @@ public class RedisUtil {
         }
     }
 
+    /** 自增指定值 */
     public long increment(String key, long delta) {
         try {
             Long result = redisTemplate.opsForValue().increment(key, delta);
@@ -125,6 +151,7 @@ public class RedisUtil {
         }
     }
 
+    /** 自减 1 */
     public long decrement(String key) {
         try {
             Long result = redisTemplate.opsForValue().decrement(key);
@@ -135,26 +162,11 @@ public class RedisUtil {
         }
     }
 
-    public boolean setVerificationCode(String key, Object value, long time, TimeUnit timeUnit) {
-        try {
-            if (time > 0) {
-                redisTemplate.opsForValue().set(key, value, time, timeUnit);
-                Object retrievedValue = redisTemplate.opsForValue().get(key);
-                if (retrievedValue != null) {
-                    return true;
-                } else {
-                    log.error("验证码存储后验证失败: key={}", key);
-                    return false;
-                }
-            } else {
-                return set(key, value);
-            }
-        } catch (Exception e) {
-            log.error("验证码存储失败: key={}", key, e);
-            return false;
-        }
-    }
+    /* ------------------------------------------------------------------ */
+    /*  登录失败锁定                                                      */
+    /* ------------------------------------------------------------------ */
 
+    /** 检查用户是否已被登录锁定 */
     public boolean isLoginLocked(String username) {
         String key = LOGIN_FAIL_PREFIX + username;
         String countStr = getString(key);
@@ -162,40 +174,28 @@ public class RedisUtil {
             return false;
         }
         int count = Integer.parseInt(countStr);
-        return count >= MAX_LOGIN_ATTEMPTS;
+        return count >= MAX_LOGIN_ATTEMPTS;        // 失败次数达到 5 次即锁定
     }
 
+    /** 获取登录锁定的剩余时间（秒） */
     public long getLoginLockRemainingTime(String username) {
         String key = LOGIN_FAIL_PREFIX + username;
         return getExpire(key);
     }
 
+    /** 记录一次登录失败（自增计数器，首次时设 15 分钟过期） */
     public void recordLoginFailure(String username) {
         String key = LOGIN_FAIL_PREFIX + username;
         long count = increment(key);
         if (count == 1) {
-            expire(key, LOGIN_LOCK_DURATION * 60);
+            expire(key, LOGIN_LOCK_DURATION * 60); // 首次失败开始计时
         }
         log.warn("登录失败记录: username={}, 次数={}/{}", username, count, MAX_LOGIN_ATTEMPTS);
     }
 
+    /** 登录成功后清除失败记录 */
     public void clearLoginFailure(String username) {
         String key = LOGIN_FAIL_PREFIX + username;
         del(key);
-    }
-
-    public boolean canSendCode(String email) {
-        String key = CODE_SEND_PREFIX + email;
-        return !hasKey(key);
-    }
-
-    public long getCodeSendRemainingTime(String email) {
-        String key = CODE_SEND_PREFIX + email;
-        return getExpire(key);
-    }
-
-    public void recordCodeSent(String email) {
-        String key = CODE_SEND_PREFIX + email;
-        set(key, "1", CODE_SEND_INTERVAL);
     }
 }

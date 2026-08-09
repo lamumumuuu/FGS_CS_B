@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    db.changelog-master.xml
+    Liquibase 主入口文件，负责按顺序引入所有版本的数据库变更日志。
+    对应 application-liquibase.yml 中配置的 change-log 路径。
+    当前项目仅有 1.0 版本，故只包含一个子文件。
+    注意：application.yml 中 liquibase.enabled = false，此文件默认不会被自动执行。
+-->
 <databaseChangeLog
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
