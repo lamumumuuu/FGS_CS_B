@@ -30,6 +30,8 @@ public interface TaskService extends IService<Task> {
 
     List<Task> getMyAcceptedTasks(Long userId);
 
+    List<Task> getMyCompletedTasks(Long userId);
+
     Task updateTask(Long id, Long userId, CreateTaskDTO dto);
 
     void deleteTask(Long id, Long userId);

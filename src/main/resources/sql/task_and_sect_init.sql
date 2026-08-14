@@ -40,9 +40,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     reject_reason TEXT,
     reviewed_by BIGINT,
     reviewed_at TIMESTAMP,
+    submission_description TEXT,          -- 提交成果描述（勇者提交悬赏时填写并持久化）
+    attachment_url TEXT,                  -- 提交成果附件链接（勇者提交悬赏时填写并持久化）
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 任务表新增字段（兼容已存在的数据库：CREATE TABLE IF NOT EXISTS 不会为旧表补列）
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submission_description TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS attachment_url TEXT;
 
 -- 任务表索引
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
@@ -128,6 +134,19 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_events_peak_id ON events(peak_id);
 CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
 CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
+
+-- 5.1 活动参与表（记录用户加入活动情况）
+CREATE TABLE IF NOT EXISTS event_participants (
+    id SERIAL PRIMARY KEY,
+    event_id BIGINT NOT NULL,                  -- 活动ID
+    user_id BIGINT NOT NULL,                   -- 参与的弟子用户ID
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 加入时间
+    CONSTRAINT uk_event_user UNIQUE (event_id, user_id)  -- 同一用户对同一活动只能加入一次
+);
+
+-- 活动参与表索引
+CREATE INDEX IF NOT EXISTS idx_event_participants_event_id ON event_participants(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_participants_user_id ON event_participants(user_id);
 
 -- 6. 初始化一些示例任务数据（可选，用于测试）
 INSERT INTO tasks (title, description, difficulty, status, reward, publisher_id, tech_requirements, created_at, updated_at)

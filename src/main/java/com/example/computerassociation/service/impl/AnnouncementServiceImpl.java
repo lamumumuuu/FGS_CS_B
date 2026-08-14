@@ -11,6 +11,7 @@ import com.example.computerassociation.mapper.AnnouncementMapper;
 import com.example.computerassociation.service.AnnouncementService;
 import com.example.computerassociation.service.PermissionService;
 import com.example.computerassociation.service.PeakService;
+import com.example.computerassociation.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,27 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     @Autowired
     private PeakService peakService;
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 根据发布者ID解析真实用户名（发布者名称统一使用用户名而非"用户"+id）
+     */
+    private String resolvePublisherName(Long publisherId) {
+        if (publisherId == null) {
+            return "未知";
+        }
+        try {
+            com.example.computerassociation.entity.User user = userService.getById(publisherId);
+            if (user != null && user.getUsername() != null) {
+                return user.getUsername();
+            }
+        } catch (Exception e) {
+            log.warn("解析发布者用户名失败: publisherId={}", publisherId, e);
+        }
+        return "用户" + publisherId;
+    }
 
     @Override
     public List<Announcement> getPublishedAnnouncements(Long userId) {
@@ -67,6 +89,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
         // 3. 按创建时间排序
         result.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+
+        // 4. 回填发布者真实用户名（兼容历史"用户"+id数据）
+        for (Announcement ann : result) {
+            ann.setPublisherName(resolvePublisherName(ann.getPublisherId()));
+        }
 
         return result;
     }
@@ -103,6 +130,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             }
         }
 
+        // 回填发布者真实用户名
+        announcement.setPublisherName(resolvePublisherName(announcement.getPublisherId()));
+
         return announcement;
     }
 
@@ -137,7 +167,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         announcement.setTitle(dto.getTitle());
         announcement.setContent(dto.getContent());
         announcement.setPublisherId(userId);
-        announcement.setPublisherName("用户" + userId);
+        announcement.setPublisherName(resolvePublisherName(userId));
         announcement.setPeakId(dto.getPeakId());
         announcement.setType(dto.getType() != null ? dto.getType() : "peak");
         announcement.setStatus("published");
@@ -207,6 +237,10 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         QueryWrapper<Announcement> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("publisher_id", userId);
         queryWrapper.orderByDesc("created_at");
-        return announcementMapper.selectList(queryWrapper);
+        List<Announcement> announcements = announcementMapper.selectList(queryWrapper);
+        for (Announcement ann : announcements) {
+            ann.setPublisherName(resolvePublisherName(ann.getPublisherId()));
+        }
+        return announcements;
     }
 }

@@ -40,4 +40,9 @@ public interface EventService extends IService<Event> {
      * 获取我的活动列表
      */
     List<Event> getMyEvents(Long userId);
+
+    /**
+     * 用户加入活动
+     */
+    void joinEvent(Long eventId, Long userId);
 }

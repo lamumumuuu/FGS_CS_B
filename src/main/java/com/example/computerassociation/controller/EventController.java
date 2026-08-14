@@ -123,4 +123,19 @@ public class EventController {
         List<Event> events = eventService.getMyEvents(userId);
         return Result.success(events);
     }
+
+    @Operation(summary = "加入活动", description = "当前用户加入指定活动",
+            security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "加入成功"),
+            @ApiResponse(responseCode = "401", description = "未登录"),
+            @ApiResponse(responseCode = "400", description = "活动已结束/人数已满/重复加入")
+    })
+    @PostMapping("/{id}/join")
+    @RequiresPermission("affair:view")
+    public Result<Void> joinEvent(@Parameter(description = "活动ID") @PathVariable Long id) {
+        Long userId = UserContext.getUserId();
+        eventService.joinEvent(id, userId);
+        return Result.success(null);
+    }
 }

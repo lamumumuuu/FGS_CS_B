@@ -41,6 +41,12 @@ public class Task {
 
     private LocalDateTime reviewedAt;
 
+    /** 提交成果描述（勇者提交悬赏时填写并持久化） */
+    private String submissionDescription;
+
+    /** 提交成果附件链接（勇者提交悬赏时填写并持久化） */
+    private String attachmentUrl;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

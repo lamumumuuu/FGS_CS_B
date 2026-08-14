@@ -197,6 +197,23 @@ public class TaskController {
         return Result.success(tasks);
     }
 
+    @Operation(summary = "获取我完成的任务", description = "获取当前用户已完成（验收通过）的任务列表",
+            security = @SecurityRequirement(name = "Bearer Authentication"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "获取成功"),
+            @ApiResponse(responseCode = "401", description = "未登录")
+    })
+    @GetMapping("/completed")
+    // 注：此接口返回当前用户已完成的任务，Service 层按 completer_id + 已完成 过滤
+    public Result<List<Task>> getMyCompletedTasks() {
+        Long userId = UserContext.getUserId();
+        if (userId == null) {
+            return Result.fail(401, "用户未登录");
+        }
+        List<Task> tasks = taskService.getMyCompletedTasks(userId);
+        return Result.success(tasks);
+    }
+
     @Operation(summary = "编辑任务", description = "编辑任务信息",
             security = @SecurityRequirement(name = "Bearer Authentication"))
     @ApiResponses({

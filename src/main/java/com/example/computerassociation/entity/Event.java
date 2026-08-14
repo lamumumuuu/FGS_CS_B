@@ -1,6 +1,7 @@
 package com.example.computerassociation.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -50,6 +51,10 @@ public class Event {
 
     /** 最大参与人数 */
     private Integer maxParticipants;
+
+    /** 已参加人数（非数据库字段，查询时动态填充） */
+    @TableField(exist = false)
+    private Integer participantCount;
 
     private LocalDateTime createdAt;
 

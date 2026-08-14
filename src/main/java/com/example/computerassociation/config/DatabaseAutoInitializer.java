@@ -183,10 +183,12 @@ public class DatabaseAutoInitializer implements CommandLineRunner {
             String catalog = conn.getCatalog();
             String schema = "public";
             
-            // 检测必需的核心表
+            // 检测必需的核心表（含业务扩展表，任一缺失即触发初始化脚本重建）
             String[] requiredTables = {
-                "users", "peaks", "roles", "permissions", 
-                "role_permissions", "user_roles", "disciples", "tasks"
+                "users", "peaks", "roles", "permissions",
+                "role_permissions", "user_roles", "disciples", "tasks",
+                "events", "event_participants", "announcements",
+                "audit_logs", "lingshi_transactions"
             };
             
             for (String tableName : requiredTables) {

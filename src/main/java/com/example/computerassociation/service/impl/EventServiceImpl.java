@@ -9,6 +9,7 @@ import com.example.computerassociation.exception.BusinessException;
 import com.example.computerassociation.mapper.EventMapper;
 import com.example.computerassociation.service.EventService;
 import com.example.computerassociation.service.PermissionService;
+import com.example.computerassociation.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,27 @@ public class EventServiceImpl extends ServiceImpl<EventMapper, Event> implements
 
     @Autowired
     private PermissionService permissionService;
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 根据组织者ID解析真实用户名（组织者名称统一使用用户名而非"用户"+id）
+     */
+    private String resolveOrganizerName(Long organizerId) {
+        if (organizerId == null) {
+            return "未知";
+        }
+        try {
+            com.example.computerassociation.entity.User user = userService.getById(organizerId);
+            if (user != null && user.getUsername() != null) {
+                return user.getUsername();
+            }
+        } catch (Exception e) {
+            log.warn("解析组织者用户名失败: organizerId={}", organizerId, e);
+        }
+        return "用户" + organizerId;
+    }
 
     @Override
     public List<Event> getActiveEvents(Long userId) {
@@ -57,7 +79,13 @@ public class EventServiceImpl extends ServiceImpl<EventMapper, Event> implements
             result.addAll(allPeakEvents);
         }
 
-        // 3. 按开始时间排序
+        // 3. 填充已参加人数
+        for (Event event : result) {
+            event.setParticipantCount(eventMapper.countParticipants(event.getId()));
+            event.setOrganizerName(resolveOrganizerName(event.getOrganizerId()));
+        }
+
+        // 4. 按开始时间排序
         result.sort((a, b) -> {
             if (a.getStartTime() == null && b.getStartTime() == null) return 0;
             if (a.getStartTime() == null) return 1;
@@ -98,6 +126,10 @@ public class EventServiceImpl extends ServiceImpl<EventMapper, Event> implements
             }
         }
 
+        // 填充已参加人数
+        event.setParticipantCount(eventMapper.countParticipants(id));
+        event.setOrganizerName(resolveOrganizerName(event.getOrganizerId()));
+
         return event;
     }
 
@@ -121,7 +153,7 @@ public class EventServiceImpl extends ServiceImpl<EventMapper, Event> implements
         event.setStartTime(dto.getStartTime());
         event.setEndTime(dto.getEndTime());
         event.setOrganizerId(userId);
-        event.setOrganizerName("用户" + userId);
+        event.setOrganizerName(resolveOrganizerName(userId));
         event.setPeakId(dto.getPeakId());
         event.setType(dto.getType() != null ? dto.getType() : "peak");
         event.setStatus("planned");
@@ -223,6 +255,42 @@ public class EventServiceImpl extends ServiceImpl<EventMapper, Event> implements
         QueryWrapper<Event> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("organizer_id", userId);
         queryWrapper.orderByDesc("created_at");
-        return eventMapper.selectList(queryWrapper);
+        List<Event> events = eventMapper.selectList(queryWrapper);
+        for (Event event : events) {
+            event.setParticipantCount(eventMapper.countParticipants(event.getId()));
+            event.setOrganizerName(resolveOrganizerName(event.getOrganizerId()));
+        }
+        return events;
+    }
+
+    @Override
+    @Transactional
+    public void joinEvent(Long eventId, Long userId) {
+        if (userId == null) {
+            throw BusinessException.of(401, "用户未登录");
+        }
+        Event event = eventMapper.selectById(eventId);
+        if (event == null) {
+            throw BusinessException.of("活动不存在");
+        }
+
+        // 已结束或已取消的活动不允许加入
+        if ("completed".equals(event.getStatus()) || "cancelled".equals(event.getStatus())) {
+            throw BusinessException.of("活动已结束，无法加入");
+        }
+
+        // 校验是否已加入
+        if (eventMapper.countUserParticipation(eventId, userId) > 0) {
+            throw BusinessException.of("您已加入该活动");
+        }
+
+        // 校验人数上限
+        int current = eventMapper.countParticipants(eventId);
+        if (event.getMaxParticipants() != null && current >= event.getMaxParticipants()) {
+            throw BusinessException.of("活动参与人数已满");
+        }
+
+        eventMapper.insertParticipant(eventId, userId);
+        log.info("用户加入活动成功: eventId={}, userId={}", eventId, userId);
     }
 }
